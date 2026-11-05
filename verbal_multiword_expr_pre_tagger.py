@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from estnltk import get_resource_paths
 from estnltk_core import RelationLayer
 from estnltk_core.taggers import RelationTagger
 
@@ -29,7 +30,7 @@ class VerbalMultiWordExprPreTagger(RelationTagger):
                  words_layer='words', sentences_layer='sentences',
                  output_layer='pre_verbal_multiword_expressions',
                  include_compound_verbs=False, include_nonfinite=False,
-                 lexicon_path=None, max_components=5, include_copula_heads=False):
+                 lexicon_path=None, max_components=5, include_copula_heads=True):
         self.input_layers = (words_layer, sentences_layer, clauses_layer, syntax_layer)
         self.output_layer = output_layer
         self.output_span_names = ('verb',) + tuple(f'comp_{i}' for i in range(1, max_components + 1))
@@ -40,8 +41,14 @@ class VerbalMultiWordExprPreTagger(RelationTagger):
         self.include_compound_verbs = include_compound_verbs
         self.include_copula_heads = include_copula_heads
         self.max_components = max_components
-        self.lexicon_path = Path(lexicon_path) if lexicon_path is not None else (
-            Path(__file__).with_name('resources') / 'eki_verbal_mwe.json')
+        if lexicon_path is None:
+            resource_path = get_resource_paths('verbal_multiword_expr_lexicon',
+                                               only_latest=True, download_missing=True)
+            if resource_path is None:
+                raise FileNotFoundError('Verbal MWE lexicon is missing. Download '
+                                        '"verbal_multiword_expr_lexicon" or set lexicon_path.')
+            lexicon_path = Path(resource_path) / 'eki_verbal_mwe.json'
+        self.lexicon_path = Path(lexicon_path)
         self._entries, self._by_lemma = load_lexicon(self.lexicon_path)
 
     def _make_layer_template(self):
