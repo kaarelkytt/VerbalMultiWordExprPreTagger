@@ -18,12 +18,22 @@ class Token:
     deprel: str
 
 
-def load_lexicon(path):
+def load_lexicon(path, max_components):
     entries = json.loads(path.read_text(encoding='utf-8'))
+    if not isinstance(entries, list):
+        raise ValueError(f'{path}: expected a JSON list of expressions.')
     by_lemma = defaultdict(list)
     for index, entry in enumerate(entries):
-        anchor = next(part for part in entry['components'] if part['is_anchor'])
-        for lemma in anchor['lemmas']:
+        parts = entry['components']
+        anchors = [part for part in parts if part['is_anchor']]
+        if len(parts) < 2 or len(anchors) != 1:
+            raise ValueError(f"{entry['expression']!r}: expected one anchor and at least one other component.")
+        if len(parts) - 1 > max_components:
+            raise ValueError(f"{entry['expression']!r} exceeds max_components={max_components}.")
+        lemmas = anchors[0]['lemmas']
+        if not anchors[0]['match_by_lemma'] or not isinstance(lemmas, list) or not lemmas:
+            raise ValueError(f"{entry['expression']!r}: the anchor must match by lemma and have lemmas.")
+        for lemma in lemmas:
             by_lemma[lemma.casefold()].append(index)
     return entries, by_lemma
 

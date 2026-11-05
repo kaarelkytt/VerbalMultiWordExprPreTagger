@@ -31,6 +31,8 @@ class VerbalMultiWordExprPreTagger(RelationTagger):
                  output_layer='pre_verbal_multiword_expressions',
                  include_compound_verbs=False, include_nonfinite=False,
                  lexicon_path=None, max_components=5, include_copula_heads=True):
+        if type(max_components) is not int or max_components < 1:
+            raise ValueError('max_components must be a positive integer.')
         self.input_layers = (words_layer, sentences_layer, clauses_layer, syntax_layer)
         self.output_layer = output_layer
         self.output_span_names = ('verb',) + tuple(f'comp_{i}' for i in range(1, max_components + 1))
@@ -49,7 +51,7 @@ class VerbalMultiWordExprPreTagger(RelationTagger):
                                         '"verbal_multiword_expr_lexicon" or set lexicon_path.')
             lexicon_path = Path(resource_path) / 'eki_verbal_mwe.json'
         self.lexicon_path = Path(lexicon_path)
-        self._entries, self._by_lemma = load_lexicon(self.lexicon_path)
+        self._entries, self._by_lemma = load_lexicon(self.lexicon_path, max_components)
 
     def _make_layer_template(self):
         return RelationLayer(name=self.output_layer, span_names=self.output_span_names,
